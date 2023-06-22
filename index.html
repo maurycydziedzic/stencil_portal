@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Three.js Portal</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      1,
+      100
+    );
+    camera.position.set(4, 5, 10);
+
+    // LIGHTING
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+
+    const backgroundTexture = new THREE.TextureLoader().load('imag5.jpg');
+    scene.background = backgroundTexture;
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(5, 10, 7.5);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.right = 2;
+    dirLight.shadow.camera.left = -2;
+    dirLight.shadow.camera.top = 2;
+    dirLight.shadow.camera.bottom = -2;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // RENDERER
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xff3540);
+    document.body.appendChild(renderer.domElement);
+
+    // CAMERA CONTROLS
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.minDistance = 2;
+    controls.maxDistance = 20;
+    controls.update();
+
+    // Borders
+    const width = 0.9;
+    const height = 0.9;
+    const depth = 0.05;
+    const thickness = 0.05;
+
+    const borderMaterial = new THREE.MeshPhongMaterial({ color: 0x1A120B });
+
+    const topBorderGeometry = new THREE.BoxGeometry(width, thickness, depth);
+    const topBorderMesh = new THREE.Mesh(topBorderGeometry, borderMaterial);
+    topBorderMesh.position.set(0, height / 2 + thickness / 2, 0.5);
+
+    const bottomBorderGeometry = new THREE.BoxGeometry(width, thickness, depth);
+    const bottomBorderMesh = new THREE.Mesh(bottomBorderGeometry, borderMaterial);
+    bottomBorderMesh.position.set(0, -height / 2 - thickness / 2, 0.5);
+
+    const leftBorderGeometry = new THREE.BoxGeometry(thickness, height + 2 * thickness, depth);
+    const leftBorderMesh = new THREE.Mesh(leftBorderGeometry, borderMaterial);
+    leftBorderMesh.position.set(-width / 2 - thickness / 2, 0, 0.5);
+
+    const rightBorderGeometry = new THREE.BoxGeometry(thickness, height + 2 * thickness, depth);
+    const rightBorderMesh = new THREE.Mesh(rightBorderGeometry, borderMaterial);
+    rightBorderMesh.position.set(width / 2 + thickness / 2, 0, 0.5);
+
+    scene.add(topBorderMesh);
+    scene.add(bottomBorderMesh);
+    scene.add(leftBorderMesh);
+    scene.add(rightBorderMesh);
+
+    function initializePortal() {
+      const addPortal = (
+        objectGeom,
+        objectColor,
+        stencilRef,
+        planePos,
+        planeRot
+      ) => {
+        const planeGeom = new THREE.PlaneGeometry();
+        const stencilMat = new THREE.MeshPhongMaterial({ color: 'white' });
+        stencilMat.depthWrite = false;
+        stencilMat.stencilWrite = true;
+        stencilMat.stencilRef = stencilRef;
+        stencilMat.stencilFunc = THREE.AlwaysStencilFunc;
+        stencilMat.stencilZPass = THREE.ReplaceStencilOp;
+        const stencilMesh = new THREE.Mesh(planeGeom, stencilMat);
+        stencilMesh.position.copy(planePos);
+        stencilMesh.rotation.x = planeRot.x;
+        stencilMesh.rotation.y = planeRot.y;
+        stencilMesh.rotation.z = planeRot.z;
+        stencilMesh.scale.multiplyScalar(0.9);
+        scene.add(stencilMesh);
+
+        // OBJECT INSIDE CUBE
+        const objectMat = new THREE.MeshPhongMaterial({ color: objectColor });
+        objectMat.stencilWrite = true;
+        objectMat.stencilRef = stencilRef;
+        objectMat.stencilFunc = THREE.EqualStencilFunc;
+
+        const objectMatOne = new THREE.MeshPhongMaterial({ color: 'blue' });
+        objectMatOne.stencilWrite = true;
+        objectMatOne.stencilRef = stencilRef;
+        objectMatOne.stencilFunc = THREE.EqualStencilFunc;
+
+        const object = new THREE.Mesh(objectGeom, objectMat);
+        const objectOne = new THREE.Mesh(
+          new THREE.RingGeometry(0.35, 0.45, 999),
+          objectMatOne
+        );
+
+        scene.add(object);
+        scene.add(objectOne);
+      };
+
+      addPortal(
+        new THREE.ConeGeometry(0.15, 0.35, 4),
+        'red',
+        1,
+        new THREE.Vector3(0, 0, 0.5),
+        new THREE.Vector3(0, 0, 0)
+      );
+
+      addPortal(
+        new THREE.BoxGeometry(0.35, 0.35, 0.35),
+        "green",
+        2,
+        new THREE.Vector3(0, 0, 0.5),
+        new THREE.Vector3(0, Math.PI, 0)
+      );
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      renderer.render(scene, camera);
+    }
+
+    initializePortal();
+
+    animate();
+  </script>
+</body>
+
+</html>
